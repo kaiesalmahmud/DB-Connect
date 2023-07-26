@@ -5,6 +5,7 @@ __pycache__/
 
 # Key files
 key.txt
+pass.txt
 
 # C extensions
 *.so

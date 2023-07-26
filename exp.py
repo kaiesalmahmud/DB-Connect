@@ -12,23 +12,12 @@ import pandas as pd
 import streamlit as st
 
 API_KEY = open('key.txt', 'r').read().strip()
-DB_PASSWORD = open('pass.txt', 'r').read().strip()
 os.environ["OPENAI_API_KEY"] = API_KEY
 
 from dotenv import load_dotenv
 load_dotenv()
 
-host="ep-wispy-forest-393400.ap-southeast-1.aws.neon.tech"
-port="5432"
-database="accountsDB"
-user="db_user"
-password=DB_PASSWORD
 
-db = SQLDatabase.from_uri(f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}")
-
-llm = ChatOpenAI(model_name="gpt-4", temperature=0)
-
-toolkit = SQLDatabaseToolkit(db=db, llm=llm)
 
 # Implement: If null value is found at the top while trying to sort in descending order, try to look for the next non-null value.
 
@@ -68,6 +57,28 @@ def get_response(input_text):
     answer = response['output']
     return sql_query, message, answer
 
+
+host="ep-wispy-forest-393400.ap-southeast-1.aws.neon.tech"
+port="5432"
+database="neondb"
+user="db_user"
+password="UdH3VeKu7Cik"
+
+# Create the sidebar for DB connection parameters
+st.sidebar.header("Connect Your Database")
+host = st.sidebar.text_input("Host", value=host)
+port = st.sidebar.text_input("Port", value=port)
+username = st.sidebar.text_input("Username", value=user)
+password = st.sidebar.text_input("Password", value=password)
+database = st.sidebar.text_input("Database", value=database)
+# submit_button = st.sidebar.checkbox("Connect")
+
+db = SQLDatabase.from_uri(f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}")
+
+llm = ChatOpenAI(model_name="gpt-4", temperature=0)
+
+toolkit = SQLDatabaseToolkit(db=db, llm=llm)
+
 agent_executor = create_sql_agent(
     llm=llm,
     toolkit=toolkit,
@@ -78,15 +89,6 @@ agent_executor = create_sql_agent(
     format_instructions=FORMAT_INSTRUCTIONS,
     agent_executor_kwargs = {'return_intermediate_steps': True}
 )
-
-# Create the sidebar for DB connection parameters
-st.sidebar.header("Connect Your Database")
-host = st.sidebar.text_input("Host", value=host)
-port = st.sidebar.text_input("Port", value=port)
-username = st.sidebar.text_input("Username", value=user)
-password = st.sidebar.text_input("Password", value=password)
-database = st.sidebar.text_input("Database", value=database)
-# submit_button = st.sidebar.checkbox("Connect")
 
 # Create the main panel
 st.title("DB Connect :cyclone:")
