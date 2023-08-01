@@ -45,6 +45,41 @@ DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the databa
 
 If the question does not seem related to the database, just return "I don't know" as the answer.
 
+Following are the unique values in some of the columns of the database:
+
+Unique values in column 'cost_category': [nan 'Operating Expense' 'Field Asset' 'Administrative Expense'
+ 'Fixed Asset' 'Receipt']
+
+
+Unique values in column 'cost_subcategory': ['Balance B/D' 'Entertainment (Admin)' 'CEO' 'City Group Accounts'
+ 'Hasan & Brothers' 'Electric Equipment' 'Office Stationary'
+ 'Computers & Printers' 'Pantry Supplies' 'IOU' 'Entertainment (Ops)'
+ 'Travelling & Conveyance' 'ISP' 'Medicine' 'Carrying Cost'
+ 'Sheba.xyz- digiGO' 'Stata IT Limited' 'Retail Partner'
+ 'Software & Subscription Fees' 'Electric Tools - Tv Installation'
+ 'Router' 'Bkash' 'Salary (Op)' 'Sales' 'Bill Reimbursement'
+ 'Final Settlement' 'Office Decoration/Reconstruction'
+ 'Office Refreshment' 'Advertising' 'Festival Bonus'
+ 'Deployment Equipments ' 'Misc. Exp' nan 'Furniture & Fixtures'
+ 'Software & Subscriptions' 'Electrician - Tv Installation'
+ 'Lunch Allowance' 'Training & Development' 'KPI Bonus' 'Office Equipment']
+
+
+Unique values in column 'Holder/Bearer/Vendor': [nan 'Staffs' 'CEO' 'Accounts (AD-IQ)' 'Vendor' 'Morshed' 'SR' 'WC'
+ 'Tea Spices' 'Salim' 'Amzad' 'Masud' 'ISP' 'Shoikot' 'Shahin' 'Rakibul'
+ 'Rubab' 'Retail Partner' 'Asif' 'Aman' 'A/C Payable' 'H & H Construction'
+ 'Printer' '32" Tv' 'Router' 'Android Box Tx6' 'Tv Frame'
+ 'Electric Spare Tools' 'Tonner Cartridge' 'Digi Jadoo Broadband Ltd'
+ 'Shamim' 'Labib' 'Teamviewer' 'Eid-ul-fitre' 'Omran' 'Hasan & Brothers'
+ 'Flat flexible cable' 'Umbrella' 'Flash Net Enterprise' 'April'
+ 'Working Capital' 'Driver' 'Condensed Milk' '100' '75'
+ "Retail Partner's Payment" 'Grid Ventures Ltd' 'Nut+Boltu' 'Sugar' 'Tea'
+ 'Coffee' 'Coffee Mate' '25' 'SSD 256 GB' 'Electrician' 'May' 'Emon' 'Jun'
+ 'Farib & Indec']
+
+
+Unique values in column 'Source': ['50K' 'SR' nan]
+
 """
 
 SQL_FUNCTIONS_SUFFIX = """I should look at the tables in the database to see what I can query.  Then I should query the schema of the most relevant tables."""
@@ -90,19 +125,49 @@ database = st.sidebar.text_input("Database", value=database)
 
 # Create the main panel
 st.title("DB Connect :cyclone:")
-st.subheader("Connect your database and ask questions!!")
+st.subheader("You are connected to AD-IQ accounts database!!")
 
 
 st.divider()
-st.write("*--Frequently Asked--*")
+st.write("*--Helpful Info--*")
 st.text("""
-1. Describe the database.
-2. What is the timeline of the data present?
+Cost categories: 
+'Operating Expense' 'Field Asset' 'Administrative Expense'
+'Fixed Asset' 'Receipt'
+
+
+Cost Subcategories: 
+'Balance B/D' 'Entertainment (Admin)' 'CEO' 'City Group Accounts'
+'Hasan & Brothers' 'Electric Equipment' 'Office Stationary'
+'Computers & Printers' 'Pantry Supplies' 'IOU' 'Entertainment (Ops)'
+'Travelling & Conveyance' 'ISP' 'Medicine' 'Carrying Cost'
+'Sheba.xyz- digiGO' 'Stata IT Limited' 'Retail Partner'
+'Software & Subscription Fees' 'Electric Tools - Tv Installation'
+'Router' 'Bkash' 'Salary (Op)' 'Sales' 'Bill Reimbursement'
+'Final Settlement' 'Office Decoration/Reconstruction'
+'Office Refreshment' 'Advertising' 'Festival Bonus'
+'Deployment Equipments ' 'Misc. Exp' nan 'Furniture & Fixtures'
+'Software & Subscriptions' 'Electrician - Tv Installation'
+'Lunch Allowance' 'Training & Development' 'KPI Bonus' 'Office Equipment'
+
+
+List of Holder/Bearer/Vendor: 
+'Staffs' 'CEO' 'Accounts (AD-IQ)' 'Vendor' 'Morshed' 'SR' 'WC'
+'Tea Spices' 'Salim' 'Amzad' 'Masud' 'ISP' 'Shoikot' 'Shahin' 'Rakibul'
+'Rubab' 'Retail Partner' 'Asif' 'Aman' 'A/C Payable' 'H & H Construction'
+'Printer' '32" Tv' 'Router' 'Android Box Tx6' 'Tv Frame'
+'Electric Spare Tools' 'Tonner Cartridge' 'Digi Jadoo Broadband Ltd'
+'Shamim' 'Labib' 'Teamviewer' 'Eid-ul-fitre' 'Omran' 'Hasan & Brothers'
+'Flat flexible cable' 'Umbrella' 'Flash Net Enterprise' 'April'
+'Working Capital' 'Driver' 'Condensed Milk' '100' '75'
+"Retail Partner's Payment" 'Grid Ventures Ltd' 'Nut+Boltu' 'Sugar' 'Tea'
+'Coffee' 'Coffee Mate' '25' 'SSD 256 GB' 'Electrician' 'May' 'Emon' 'Jun'
+'Farib & Indec'
 """)
 st.divider()
 
 # Get the user's natural question input
-question = st.text_input(":blue[Ask a question:]", placeholder="Enter your question")
+question = st.text_input(":blue[Ask a question:]", placeholder="Enter your question. Eg. How much did we spend on ISP?")
 
 # Create a submit button for executing the query
 query_button = st.button("Submit")
@@ -114,6 +179,7 @@ if query_button:
     # Execute the query and get the results as a dataframe
     try:
         with st.spinner('Calculating...'):
+            print(str(question))
             sql_query, message, answer = get_response(question)
 
         st.subheader("Answer :robot_face:")
