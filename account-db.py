@@ -181,6 +181,9 @@ if query_button:
         with st.spinner('Calculating...'):
             print(str(question))
             sql_query, message, answer = get_response(question)
+        
+        st.subheader("Query:")
+        st.write(sql_query)
 
         st.subheader("Answer :robot_face:")
         st.write(answer)
