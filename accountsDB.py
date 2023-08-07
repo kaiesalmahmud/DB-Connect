@@ -92,19 +92,19 @@ def get_response(input_text):
 host="ep-wispy-forest-393400.ap-southeast-1.aws.neon.tech"
 port="5432"
 database="accountsDB"
-user="db_user"
+username="db_user"
 password=DB_PASSWORD
 
 # Create the sidebar for DB connection parameters
 st.sidebar.header("Connect Your Database")
 host = st.sidebar.text_input("Host", value=host)
 port = st.sidebar.text_input("Port", value=port)
-username = st.sidebar.text_input("Username", value=user)
+username = st.sidebar.text_input("Username", value=username)
 password = st.sidebar.text_input("Password", value=password)
 database = st.sidebar.text_input("Database", value=database)
 # submit_button = st.sidebar.checkbox("Connect")
 
-db = SQLDatabase.from_uri(f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}")
+db = SQLDatabase.from_uri(f"postgresql+psycopg2://{username}:{password}@{host}:{port}/{database}")
 
 llm = ChatOpenAI(model_name="gpt-4", temperature=0)
 
