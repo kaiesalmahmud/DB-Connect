@@ -194,18 +194,17 @@ if query_button:
         st.subheader("Answer :robot_face:")
         st.write(answer)
 
-        st.divider()
-        
-
-
         try:
             if query:
 
                 # st.caption("Query:")
                 # st.caption(query)
+                st.divider()
 
                 st.caption("Explaination:")
                 st.caption(explaination)
+
+                st.divider()
         except Exception as e:
             print(e)
 
