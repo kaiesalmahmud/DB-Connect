@@ -14,6 +14,8 @@ API_KEY = open('key.txt', 'r').read().strip()
 DB_PASSWORD = open('pass.txt', 'r').read().strip()
 os.environ["OPENAI_API_KEY"] = API_KEY
 
+openai.api_key = API_KEY
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -178,25 +180,36 @@ if query_button:
             # print(str(question))
             schema, query, query_output, answer = get_response(question)
 
-            if query is not None:
+            if query:
                 explaination = explain(query, schema, query_output)
+            else: explaination = None
 
-        if query is not None:
-            print("\nExplaination: " + str(explaination))
-    
+            # explaination = explain(query, schema, query_output)
+
+        # if query:
+        #     print("\nExplaination: " + str(explaination))
+
+        print("\nExplaination: " + str(explaination))
 
         st.subheader("Answer :robot_face:")
         st.write(answer)
 
         st.divider()
         
-        # st.caption("Query:")
-        # st.write(query)
 
-        if query is not None:
-            st.caption("Explaination:")
-            st.caption(explaination)
+
+        try:
+            if query:
+
+                # st.caption("Query:")
+                # st.caption(query)
+
+                st.caption("Explaination:")
+                st.caption(explaination)
+        except Exception as e:
+            print(e)
 
         st.info(":coffee: _Did that answer your question? If not, try to be more specific._")
-    except:
+    except Exception as e:
+        print(e)
         st.warning(":wave: Please enter a valid question. Try to be as specific as possible.")
