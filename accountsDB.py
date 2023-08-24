@@ -1,4 +1,5 @@
 import os
+import openai
 from langchain.agents import create_sql_agent
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
 from langchain.sql_database import SQLDatabase
@@ -12,6 +13,8 @@ import streamlit as st
 API_KEY = open('key.txt', 'r').read().strip()
 DB_PASSWORD = open('pass.txt', 'r').read().strip()
 os.environ["OPENAI_API_KEY"] = API_KEY
+
+openai.api_key = API_KEY
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -81,12 +84,54 @@ Thought: I now know the final answer
 Final Answer: the final answer to the original input question
 """
 
+
 def get_response(input_text):
     response = agent_executor(input_text)
-    sql_query = response['intermediate_steps'][-1][0].tool_input
-    message = response['intermediate_steps'][-1][0].message_log[0].content
+
+    # print(response['intermediate_steps'][1][0].tool)
+    # print(response['intermediate_steps'][-1][0].tool)
+    # print(response['output'])
+
+
+    if response['intermediate_steps'][1][0].tool == 'sql_db_schema':
+        schema = response['intermediate_steps'][1][1]
+    else: schema = None
+
+    if response['intermediate_steps'][-1][0].tool == 'sql_db_query':
+        query = response['intermediate_steps'][-1][0].tool_input
+        query_output = response['intermediate_steps'][-1][1]
+    else: query, query_output = None, None
+
     answer = response['output']
-    return sql_query, message, answer
+
+    return schema, query, query_output, answer
+
+def explain(query, schema, query_output):
+
+    message_history = [{"role": "user", "content": f"""You are a SQL query explainer bot. That means you will explain the logic of a SQL query. 
+                    There is a postgreSQL database table with the following table:
+
+                    {schema}                   
+                    
+                    A SQL query is executed on the table and it returns the following result:
+
+                    {query_output}
+
+                    I will give you the SQL query executed to get the result and you will explain the logic executed in the query.
+                    Make the explanation brief and simple. It will be used as the explanation of the results. Do not mention the query itself.
+                    No need to explain the total query. Just explain the logic of the query.
+                    Reply only with the explaination to further input. If you understand, say OK."""},
+                   {"role": "assistant", "content": f"OK"}]
+
+    message_history.append({"role": "user", "content": query})
+
+    completion = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=message_history,
+    )
+
+    explaination = completion.choices[0].message.content
+    return explaination
 
 
 host="ep-wispy-forest-393400.ap-southeast-1.aws.neon.tech"
@@ -124,6 +169,7 @@ agent_executor = create_sql_agent(
 # Create the main panel
 st.title("DB Connect :cyclone:")
 st.subheader("You are connected to AD-IQ Accounts database!!")
+st.caption("The database contains the Daily Cash Input Output data for AD-IQ Accounts from Jan to June")
 
 
 st.divider()
@@ -179,14 +225,36 @@ if query_button:
         with st.spinner('Calculating...'):
             print("\nQuestion: " + str(question))
             # print(str(question))
-            sql_query, message, answer = get_response(question)
-        
-        st.subheader("Query:")
-        st.write(sql_query)
+            schema, query, query_output, answer = get_response(question)
+
+            if query:
+                explaination = explain(query, schema, query_output)
+            else: explaination = None
+
+            # explaination = explain(query, schema, query_output)
+
+        # if query:
+        #     print("\nExplaination: " + str(explaination))
+
+        print("\nExplaination: " + str(explaination))
 
         st.subheader("Answer :robot_face:")
         st.write(answer)
-        # results_df = sqlout(connection, sql_query)
+
+        try:
+            if query:
+
+                # st.caption("Query:")
+                # st.caption(query)
+                st.divider()
+
+                st.caption("Explaination:")
+                st.caption(explaination)
+
+                st.divider()
+        except Exception as e:
+            print(e)
+
         st.info(":coffee: _Did that answer your question? If not, try to be more specific._")
     except:
         st.warning(":wave: Please enter a valid question. Try to be as specific as possible.")
