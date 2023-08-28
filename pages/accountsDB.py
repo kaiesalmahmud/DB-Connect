@@ -20,8 +20,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-# Implement: If null value is found at the top while trying to sort in descending order, try to look for the next non-null value.
-
 SQL_PREFIX = """You are an agent designed to interact with a SQL database.
 Given an input question, create a syntactically correct {dialect} query to run, then look at the results of the query and return the answer.
 Unless the user specifies a specific number of examples they wish to obtain, always limit your query to at most {top_k} results.
@@ -35,14 +33,128 @@ DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the databa
 
 If the question does not seem related to the database, just return "I don't know" as the answer.
 
-SQL query format example:
-Question: "Who are the top 5 retailers for the month of May in terms of total play time?"
-Query: SELECT "Retail Name", SUM("Total Play time") as total_play_time 
-       FROM "dailyLog" 
-       WHERE EXTRACT(MONTH FROM "Date") = 5 
-       GROUP BY "Retail Name" 
-       ORDER BY total_play_time DESC 
-       LIMIT 5
+Following are the unique values in some of the columns of the database. Search for these values in their corresponding columns to get the relevant information:
+
+Unique values in column 'cost_category': ["Fixed Asset"
+"Field Asset"
+"Receipt"
+"Operating Expense"
+"Administrative Expense"
+"None"]
+
+
+Unique values in column 'cost_subcategory': ["Computers & Printers"
+"Software & Subscriptions"
+"Furniture & Fixtures"
+"None"
+"Pantry Supplies"
+"Office Stationary"
+"Travelling & Conveyance"
+"Misc. Exp"
+"ISP"
+"City Group Accounts"
+"Electrician - Tv Installation"
+"Stata IT Limited"
+"Sheba.xyz- digiGO"
+"Salary (Op)"
+"Advertising"
+"Hasan & Brothers"
+"CEO"
+"KPI Bonus"
+"Final Settlement"
+"Software & Subscription Fees"
+"Electric Equipment"
+"IOU"
+"Medicine"
+"Training & Development"
+"Sales"
+"Bill Reimbursement"
+"Lunch Allowance"
+"Balance B/D"
+"Deployment Equipments "
+"Retail Partner"
+"Electric Tools - Tv Installation"
+"Office Decoration/Reconstruction"
+"Entertainment (Ops)"
+"Carrying Cost"
+"Entertainment (Admin)"
+"Festival Bonus"
+"Office Refreshment"
+"Office Equipment"
+"Bkash"
+"Router"]
+
+
+Unique values in column 'holder_bearer_vendor_quantity_device_name': ["Electric Spare Tools"
+"75"
+"None"
+"Salim"
+"Rakibul"
+"Shoikot"
+"Morshed"
+"Android Box Tx6"
+"ISP"
+"Tv Frame"
+"25"
+"Hasan & Brothers"
+"Digi Jadoo Broadband Ltd"
+"H & H Construction"
+"Teamviewer"
+"Tea Spices"
+"Amzad"
+"Vendor"
+"100"
+"Omran"
+"Flash Net Enterprise"
+"Grid Ventures Ltd"
+"32 Tv"
+"Aman"
+"Retail Partner"
+"Printer"
+"Shahin"
+"Umbrella"
+"Masud"
+"A/C Payable"
+"Tea"
+"Coffee"
+"Staffs"
+"Emon"
+"Flat flexible cable"
+"May"
+"Working Capital"
+"Eid-ul-fitre"
+"Shamim"
+"Rubab"
+"SR"
+"CEO"
+"WC"
+"SSD 256 GB"
+"Accounts (AD-IQ)"
+"Retail Partner's Payment"
+"Condensed Milk"
+"Electrician"
+"Farib & Indec"
+"Jun"
+"Asif"
+"Driver"
+"Nut+Boltu"
+"Sugar"
+"Labib"
+"April"
+"Coffee Mate"
+"Tonner Cartridge"
+"Router"]
+
+
+Unique values in column 'source': ["50K" 
+"SR" 
+"None"]
+
+Following are some exmaple question and their corresponding queries:
+
+Question: give me top 10 cash out in may?
+Query: SELECT date, details, cash_out FROM ledger WHERE EXTRACT(MONTH FROM date) = 5 AND cash_out IS NOT NULL  ORDER BY cash_out DESC LIMIT 10;
+Observation: When ordering by a column in descending order, the top values will be the largest values in the column.
 
 """
 
@@ -109,20 +221,21 @@ def explain(query, schema, query_output):
     explaination = completion.choices[0].message.content
     return explaination
 
-host="localhost"
-port="5432"
-database="ReportDB"
-username="postgres"
-password="postgres"
 
-# Create the sidebar for DB connection parameters
-st.sidebar.header("Connect Your Database")
-host = st.sidebar.text_input("Host", value=host)
-port = st.sidebar.text_input("Port", value=port)
-username = st.sidebar.text_input("Username", value=username)
-password = st.sidebar.text_input("Password", value=password)
-database = st.sidebar.text_input("Database", value=database)
-# submit_button = st.sidebar.checkbox("Connect")
+host="ep-wispy-forest-393400.ap-southeast-1.aws.neon.tech"
+port="5432"
+database="accountsDB"
+username="db_user"
+password=DB_PASSWORD
+
+# # Create the sidebar for DB connection parameters
+# st.sidebar.header("Connect Your Database")
+# host = st.sidebar.text_input("Host", value=host)
+# port = st.sidebar.text_input("Port", value=port)
+# username = st.sidebar.text_input("Username", value=username)
+# password = st.sidebar.text_input("Password", value=password)
+# database = st.sidebar.text_input("Database", value=database)
+# # submit_button = st.sidebar.checkbox("Connect")
 
 db = SQLDatabase.from_uri(f"postgresql+psycopg2://{username}:{password}@{host}:{port}/{database}")
 
@@ -142,26 +255,147 @@ agent_executor = create_sql_agent(
 )
 
 # Create the main panel
-st.title("DB Connect :cyclone:")
-st.subheader("You are connected to AD-IQ DailyLog database!!")
-st.caption("The database contains the Daily Log data for AD-IQ screens from April 1st to June 17th")
+st.title("connectDB :star2:")
+st.subheader("You are connected to AD-IQ Accounts database!!")
+st.caption("The database contains the Daily Cash Input Output data for AD-IQ Accounts from Jan to June")
 
 
-st.divider()
-st.write("*--Frequently Asked--*")
-st.text("""
-1. Describe the database.
-2. What is the timeline of the data present?
-3. What is the average total play time for the month of April?
-4. Who are the top 5 retailers for the month of May in terms of total play time?
-5. How many areas are the shops located at?
-6. What is the combined total play time for 5th May?
-7. List the top 5 areas with least average efficiency.
-8. List of most not opened shops for the month of April.
-9. Which shops has most count of playtime of less than 10 hours?
-10. Which shops has the most count of start time after 10 am?
-""")
-st.divider()
+with st.expander("Database properties"):
+
+    # st.divider()
+
+    # st.write("*--Helpful Info--*")
+    st.subheader("Cost categories:")
+    st.text("""
+    "Fixed Asset"
+    "Field Asset"
+    "Receipt"
+    "Operating Expense"
+    "Administrative Expense"
+    "None"
+    """)
+
+    st.subheader("Cost Subcategories:")
+    st.text("""
+    "Computers & Printers"
+    "Software & Subscriptions"
+    "Furniture & Fixtures"
+    "None"
+    "Pantry Supplies"
+    "Office Stationary"
+    "Travelling & Conveyance"
+    "Misc. Exp"
+    "ISP"
+    "City Group Accounts"
+    "Electrician - Tv Installation"
+    "Stata IT Limited"
+    "Sheba.xyz- digiGO"
+    "Salary (Op)"
+    "Advertising"
+    "Hasan & Brothers"
+    "CEO"
+    "KPI Bonus"
+    "Final Settlement"
+    "Software & Subscription Fees"
+    "Electric Equipment"
+    "IOU"
+    "Medicine"
+    "Training & Development"
+    "Sales"
+    "Bill Reimbursement"
+    "Lunch Allowance"
+    "Balance B/D"
+    "Deployment Equipments "
+    "Retail Partner"
+    "Electric Tools - Tv Installation"
+    "Office Decoration/Reconstruction"
+    "Entertainment (Ops)"
+    "Carrying Cost"
+    "Entertainment (Admin)"
+    "Festival Bonus"
+    "Office Refreshment"
+    "Office Equipment"
+    "Bkash"
+    "Router"
+
+    """)
+
+    st.subheader("List of Holder/Bearer/Vendor:")
+    st.text("""
+    "Electric Spare Tools"
+    "75"
+    "None"
+    "Salim"
+    "Rakibul"
+    "Shoikot"
+    "Morshed"
+    "Android Box Tx6"
+    "ISP"
+    "Tv Frame"
+    "25"
+    "Hasan & Brothers"
+    "Digi Jadoo Broadband Ltd"
+    "H & H Construction"
+    "Teamviewer"
+    "Tea Spices"
+    "Amzad"
+    "Vendor"
+    "100"
+    "Omran"
+    "Flash Net Enterprise"
+    "Grid Ventures Ltd"
+    "32 Tv"
+    "Aman"
+    "Retail Partner"
+    "Printer"
+    "Shahin"
+    "Umbrella"
+    "Masud"
+    "A/C Payable"
+    "Tea"
+    "Coffee"
+    "Staffs"
+    "Emon"
+    "Flat flexible cable"
+    "May"
+    "Working Capital"
+    "Eid-ul-fitre"
+    "Shamim"
+    "Rubab"
+    "SR"
+    "CEO"
+    "WC"
+    "SSD 256 GB"
+    "Accounts (AD-IQ)"
+    "Retail Partner's Payment"
+    "Condensed Milk"
+    "Electrician"
+    "Farib & Indec"
+    "Jun"
+    "Asif"
+    "Driver"
+    "Nut+Boltu"
+    "Sugar"
+    "Labib"
+    "April"
+    "Coffee Mate"
+    "Tonner Cartridge"
+    "Router"
+    """)
+    # st.divider()
+
+with st.expander("FAQs"):
+    st.text("""
+    1. Describe the database.
+    2. What is the timeline of the data present?
+    3. Who are the top 5 most expensive vendors?
+    4. What is the total amount of money spent on 'Electrician'?
+    5. How many different cost categories are there?
+    6. What is the total ISP cost in May?
+    7. Would you happen to have any information about the CEO?
+    8. Give me all expenses regarding Rubab?
+    9. Do we have any scope to reduce the expenses on operations?
+    """)
 
 # Get the user's natural question input
 question = st.text_input(":blue[Ask a question:]", placeholder="Enter your question.")
@@ -197,9 +431,9 @@ if query_button:
         try:
             if query:
 
+                st.divider()
                 # st.caption("Query:")
                 # st.caption(query)
-                st.divider()
 
                 st.caption("Explaination:")
                 st.caption(explaination)
@@ -209,6 +443,5 @@ if query_button:
             print(e)
 
         st.info(":coffee: _Did that answer your question? If not, try to be more specific._")
-    except Exception as e:
-        print(e)
+    except:
         st.warning(":wave: Please enter a valid question. Try to be as specific as possible.")

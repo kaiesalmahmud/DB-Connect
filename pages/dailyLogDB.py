@@ -20,6 +20,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+# Implement: If null value is found at the top while trying to sort in descending order, try to look for the next non-null value.
+
 SQL_PREFIX = """You are an agent designed to interact with a SQL database.
 Given an input question, create a syntactically correct {dialect} query to run, then look at the results of the query and return the answer.
 Unless the user specifies a specific number of examples they wish to obtain, always limit your query to at most {top_k} results.
@@ -33,41 +35,17 @@ DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the databa
 
 If the question does not seem related to the database, just return "I don't know" as the answer.
 
-Following are the unique values in some of the columns of the database:
+SQL query format example:
+Question: "Who are the top 5 retailers for the month of May in terms of total play time?"
+Query: SELECT "Retail Name", SUM("Total Play time") as total_play_time 
+       FROM "dailyLog" 
+       WHERE EXTRACT(MONTH FROM "Date") = 5 AND total_play_time IS NOT NULL
+       GROUP BY "Retail Name" 
+       ORDER BY total_play_time DESC 
+       LIMIT 5
 
-Unique values in column 'cost_category': [nan 'Operating Expense' 'Field Asset' 'Administrative Expense'
- 'Fixed Asset' 'Receipt']
-
-
-Unique values in column 'cost_subcategory': ['Balance B/D' 'Entertainment (Admin)' 'CEO' 'City Group Accounts'
- 'Hasan & Brothers' 'Electric Equipment' 'Office Stationary'
- 'Computers & Printers' 'Pantry Supplies' 'IOU' 'Entertainment (Ops)'
- 'Travelling & Conveyance' 'ISP' 'Medicine' 'Carrying Cost'
- 'Sheba.xyz- digiGO' 'Stata IT Limited' 'Retail Partner'
- 'Software & Subscription Fees' 'Electric Tools - Tv Installation'
- 'Router' 'Bkash' 'Salary (Op)' 'Sales' 'Bill Reimbursement'
- 'Final Settlement' 'Office Decoration/Reconstruction'
- 'Office Refreshment' 'Advertising' 'Festival Bonus'
- 'Deployment Equipments ' 'Misc. Exp' nan 'Furniture & Fixtures'
- 'Software & Subscriptions' 'Electrician - Tv Installation'
- 'Lunch Allowance' 'Training & Development' 'KPI Bonus' 'Office Equipment']
-
-
-Unique values in column 'Holder/Bearer/Vendor': [nan 'Staffs' 'CEO' 'Accounts (AD-IQ)' 'Vendor' 'Morshed' 'SR' 'WC'
- 'Tea Spices' 'Salim' 'Amzad' 'Masud' 'ISP' 'Shoikot' 'Shahin' 'Rakibul'
- 'Rubab' 'Retail Partner' 'Asif' 'Aman' 'A/C Payable' 'H & H Construction'
- 'Printer' '32" Tv' 'Router' 'Android Box Tx6' 'Tv Frame'
- 'Electric Spare Tools' 'Tonner Cartridge' 'Digi Jadoo Broadband Ltd'
- 'Shamim' 'Labib' 'Teamviewer' 'Eid-ul-fitre' 'Omran' 'Hasan & Brothers'
- 'Flat flexible cable' 'Umbrella' 'Flash Net Enterprise' 'April'
- 'Working Capital' 'Driver' 'Condensed Milk' '100' '75'
- "Retail Partner's Payment" 'Grid Ventures Ltd' 'Nut+Boltu' 'Sugar' 'Tea'
- 'Coffee' 'Coffee Mate' '25' 'SSD 256 GB' 'Electrician' 'May' 'Emon' 'Jun'
- 'Farib & Indec']
-
-
-Unique values in column 'Source': ['50K' 'SR' nan]
-
+Observation: When ordering by a column in descending order, the top values will be the largest values in the column.
+       
 """
 
 SQL_FUNCTIONS_SUFFIX = """I should look at the tables in the database to see what I can query.  Then I should query the schema of the most relevant tables."""
@@ -133,21 +111,20 @@ def explain(query, schema, query_output):
     explaination = completion.choices[0].message.content
     return explaination
 
-
-host="ep-wispy-forest-393400.ap-southeast-1.aws.neon.tech"
+host="localhost"
 port="5432"
-database="accountsDB"
-username="db_user"
-password=DB_PASSWORD
+database="ReportDB"
+username="postgres"
+password="postgres"
 
-# Create the sidebar for DB connection parameters
-st.sidebar.header("Connect Your Database")
-host = st.sidebar.text_input("Host", value=host)
-port = st.sidebar.text_input("Port", value=port)
-username = st.sidebar.text_input("Username", value=username)
-password = st.sidebar.text_input("Password", value=password)
-database = st.sidebar.text_input("Database", value=database)
-# submit_button = st.sidebar.checkbox("Connect")
+# # Create the sidebar for DB connection parameters
+# st.sidebar.header("Connect Your Database")
+# host = st.sidebar.text_input("Host", value=host)
+# port = st.sidebar.text_input("Port", value=port)
+# username = st.sidebar.text_input("Username", value=username)
+# password = st.sidebar.text_input("Password", value=password)
+# database = st.sidebar.text_input("Database", value=database)
+# # submit_button = st.sidebar.checkbox("Connect")
 
 db = SQLDatabase.from_uri(f"postgresql+psycopg2://{username}:{password}@{host}:{port}/{database}")
 
@@ -167,48 +144,37 @@ agent_executor = create_sql_agent(
 )
 
 # Create the main panel
-st.title("DB Connect :cyclone:")
-st.subheader("You are connected to AD-IQ Accounts database!!")
-st.caption("The database contains the Daily Cash Input Output data for AD-IQ Accounts from Jan to June")
+st.title("connectDB :star2:")
+st.subheader("You are connected to AD-IQ DailyLog database!!")
+st.caption("The database contains the Daily Log data for AD-IQ screens from April 1st to June 17th")
 
+with st.expander("Database properties"):
+    st.text("""
+            "Date"
+            "Retail Name"
+            "Zone"
+            "Location"
+            "Total Play time"
+            "Efficiency (percent)"
+            "Start Time"
+            "End Time"
+            "Device Offline time"
+            "Remarks"
+            """)
 
-st.divider()
-st.write("*--Helpful Info--*")
-st.text("""
-Cost categories: 
-'Operating Expense' 'Field Asset' 'Administrative Expense'
-'Fixed Asset' 'Receipt'
-
-
-Cost Subcategories: 
-'Balance B/D' 'Entertainment (Admin)' 'CEO' 'City Group Accounts'
-'Hasan & Brothers' 'Electric Equipment' 'Office Stationary'
-'Computers & Printers' 'Pantry Supplies' 'IOU' 'Entertainment (Ops)'
-'Travelling & Conveyance' 'ISP' 'Medicine' 'Carrying Cost'
-'Sheba.xyz- digiGO' 'Stata IT Limited' 'Retail Partner'
-'Software & Subscription Fees' 'Electric Tools - Tv Installation'
-'Router' 'Bkash' 'Salary (Op)' 'Sales' 'Bill Reimbursement'
-'Final Settlement' 'Office Decoration/Reconstruction'
-'Office Refreshment' 'Advertising' 'Festival Bonus'
-'Deployment Equipments ' 'Misc. Exp' nan 'Furniture & Fixtures'
-'Software & Subscriptions' 'Electrician - Tv Installation'
-'Lunch Allowance' 'Training & Development' 'KPI Bonus' 'Office Equipment'
-
-
-List of Holder/Bearer/Vendor: 
-'Staffs' 'CEO' 'Accounts (AD-IQ)' 'Vendor' 'Morshed' 'SR' 'WC'
-'Tea Spices' 'Salim' 'Amzad' 'Masud' 'ISP' 'Shoikot' 'Shahin' 'Rakibul'
-'Rubab' 'Retail Partner' 'Asif' 'Aman' 'A/C Payable' 'H & H Construction'
-'Printer' '32" Tv' 'Router' 'Android Box Tx6' 'Tv Frame'
-'Electric Spare Tools' 'Tonner Cartridge' 'Digi Jadoo Broadband Ltd'
-'Shamim' 'Labib' 'Teamviewer' 'Eid-ul-fitre' 'Omran' 'Hasan & Brothers'
-'Flat flexible cable' 'Umbrella' 'Flash Net Enterprise' 'April'
-'Working Capital' 'Driver' 'Condensed Milk' '100' '75'
-"Retail Partner's Payment" 'Grid Ventures Ltd' 'Nut+Boltu' 'Sugar' 'Tea'
-'Coffee' 'Coffee Mate' '25' 'SSD 256 GB' 'Electrician' 'May' 'Emon' 'Jun'
-'Farib & Indec'
-""")
-st.divider()
+with st.expander("FAQs"):
+    st.text("""
+    1. Describe the database.
+    2. What is the timeline of the data present?
+    3. What is the average total play time for the month of April?
+    4. Who are the top 5 retailers for the month of May in terms of total play time?
+    5. How many areas are the shops located at?
+    6. What is the combined total play time for 5th May?
+    7. List the top 5 areas with least average efficiency.
+    8. List of most not opened shops for the month of April.
+    9. Which shops has most count of playtime of less than 10 hours?
+    10. Which shops has the most count of start time after 10 am?
+    """)
 
 # Get the user's natural question input
 question = st.text_input(":blue[Ask a question:]", placeholder="Enter your question.")
@@ -244,9 +210,9 @@ if query_button:
         try:
             if query:
 
+                st.divider()
                 # st.caption("Query:")
                 # st.caption(query)
-                st.divider()
 
                 st.caption("Explaination:")
                 st.caption(explaination)
@@ -256,5 +222,6 @@ if query_button:
             print(e)
 
         st.info(":coffee: _Did that answer your question? If not, try to be more specific._")
-    except:
+    except Exception as e:
+        print(e)
         st.warning(":wave: Please enter a valid question. Try to be as specific as possible.")
