@@ -1,30 +1,71 @@
 import os
 import openai
-import sys
-from dotenv import load_dotenv
-import shutil
-from langchain.llms import OpenAI
-from langchain.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.embeddings.sentence_transformer import SentenceTransformerEmbeddings
-from langchain.vectorstores import Chroma
-from langchain.retrievers.self_query.base import SelfQueryRetriever
-from langchain.chains.query_constructor.base import AttributeInfo
-from langchain.prompts import PromptTemplate
-from langchain.chains import RetrievalQA
-
-from langchain.retrievers import ContextualCompressionRetriever
-from langchain.retrievers.document_compressors import LLMChainExtractor
-
-from langchain.memory import ConversationBufferMemory, ConversationBufferWindowMemory
 
 import streamlit as st
-from io import StringIO
+from dotenv import load_dotenv
+from PyPDF2 import PdfReader
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings
+from langchain.vectorstores import FAISS
+from langchain.chat_models import ChatOpenAI
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+from htmlTemplates import css, bot_template, user_template
+from langchain.llms import HuggingFaceHub
 
-# sys.path.append('../..')
-database_path = "database/chroma_db"
+def get_pdf_text(pdf_docs):
+    text = ""
+    for pdf in pdf_docs:
+        pdf_reader = PdfReader(pdf)
+        for page in pdf_reader.pages:
+            text += page.extract_text()
+    return text
 
+
+def get_text_chunks(text):
+    text_splitter = CharacterTextSplitter(
+        separator="\n",
+        chunk_size=1000,
+        chunk_overlap=200,
+        length_function=len
+    )
+    chunks = text_splitter.split_text(text)
+    return chunks
+
+
+def get_vectorstore(text_chunks):
+    embeddings = OpenAIEmbeddings()
+    # embeddings = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl")
+    vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
+    return vectorstore
+
+
+def get_conversation_chain(vectorstore):
+    llm = ChatOpenAI()
+    # llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_length":512})
+
+    memory = ConversationBufferMemory(
+        memory_key='chat_history', return_messages=True)
+    conversation_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        retriever=vectorstore.as_retriever(),
+        memory=memory
+    )
+    return conversation_chain
+
+
+def handle_userinput(user_question):
+    response = st.session_state.conversation({'question': user_question})
+    st.session_state.chat_history = response['chat_history']
+
+    for i, message in enumerate(st.session_state.chat_history):
+        if i % 2 == 0:
+            st.write(user_template.replace(
+                "{{MSG}}", message.content), unsafe_allow_html=True)
+        else:
+            st.write(bot_template.replace(
+                "{{MSG}}", message.content), unsafe_allow_html=True)
+            
 API_KEY = open('key.txt', 'r').read().strip()
 os.environ["OPENAI_API_KEY"] = API_KEY
 
@@ -33,152 +74,34 @@ openai.api_key = API_KEY
 from dotenv import load_dotenv
 load_dotenv()
 
-# Create the main panel
-st.title("anyDOC :bookmark_tabs:")
-st.subheader("Upload and chat with your documents!")
 
-uploaded_file = None
-# Create the sidebar for DB connection parameters
-# st.sidebar.header("Upload Your Documents")
-uploaded_file = st.file_uploader('Choose your file', type="pdf")
+st.write(css, unsafe_allow_html=True)
 
-filename = "uploaded_pdfs/document.pdf"
+if "conversation" not in st.session_state:
+    st.session_state.conversation = None
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = None
 
-if uploaded_file is not None:
-    # To read file as bytes:
-    bytes_data = uploaded_file.getvalue()
+st.header("anyDOC :bookmark_tabs:")
 
-    with open(filename, 'wb') as f: 
-        f.write(bytes_data)
+pdf_docs = st.file_uploader(
+    "Upload your PDFs here and click on 'Process'", accept_multiple_files=True)
 
+if st.button("Process"):
+    with st.spinner("Processing"):
+        # get pdf text
+        raw_text = get_pdf_text(pdf_docs)
 
-    # if uploaded_file is not None:
+        # get the text chunks
+        text_chunks = get_text_chunks(raw_text)
 
-    loaders = [#PyPDFLoader("/home/sohug/DATAPRAME/DATA/pdf/attention.pdf"),
-            PyPDFLoader("uploaded_pdfs/document.pdf"),
-            #PyPDFLoader("DATA/pdf/AD-IQ SOP.pdf"),
-            #PyPDFLoader("DATA/pdf/The-Little-Prince.pdf"),
-            ]
+        # create vector store
+        vectorstore = get_vectorstore(text_chunks)
 
-    data = []
-    for loader in loaders:
-        data.extend(loader.load())
+        # create conversation chain
+        st.session_state.conversation = get_conversation_chain(
+            vectorstore)
 
-    #token_splitter = TokenTextSplitter(chunk_size=100, chunk_overlap=0)
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size = 1000,
-        chunk_overlap = 150,
-        separators=["\n\n", "\n", "(?<=\. )", " ", ""]
-    )
-
-    data_splits = text_splitter.split_documents(data)
-
-
-    # create the open-source embedding function
-    embedding = OpenAIEmbeddings()
-
-    shutil.rmtree(database_path)
-    # load it into Chroma
-    database = Chroma.from_documents(data_splits, embedding, persist_directory=database_path)
-    #print(database._collection.count())
-
-
-    llm = OpenAI(temperature=0)
-
-    #Compression retriever
-    compressor = LLMChainExtractor.from_llm(llm)
-    compression_retriever = ContextualCompressionRetriever(
-        base_compressor=compressor,
-        base_retriever=database.as_retriever()
-    )
-    #docs = retriever.get_relevant_documents(query)
-
-    # # Build prompt
-    # template = """Use the following pieces of context to answer the question at the end. 
-    # If you don't know the exact answer, just say that you don't know, don't try to make up an answer. 
-    # Use fifty sentences maximum. Keep the answer as concise as possible. 
-    # Always say "Thanks for asking!" at the end of the answer. 
-    # {context}
-    # Question: {question}
-    # Helpful Answer:"""
-
-    # QA_CHAIN_PROMPT = PromptTemplate.from_template(template)
-
-    template = """
-    Use the following context (delimited by <ctx></ctx>) and the chat history (delimited by <hs></hs>) to answer the question:
-    ------
-    <ctx>
-    {context}
-    </ctx>
-    ------
-    <hs>
-    {history}
-    </hs>
-    ------
-    {question}
-    Answer:
-    """
-    prompt = PromptTemplate(
-        input_variables=["context", "history", "question"],
-        template=template,
-    )
-
-
-    # # Run chain
-    # qa_chain = RetrievalQA.from_chain_type(
-    #     llm,
-    #     retriever = compression_retriever,
-    #     return_source_documents=True,
-    #     chain_type_kwargs={"prompt": QA_CHAIN_PROMPT},
-    #     #chain_type="refine"
-    #     verbose=False,
-    # )
-
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type='stuff',
-        return_source_documents=True,
-        retriever=compression_retriever,
-        verbose=True,
-        chain_type_kwargs={
-            "verbose": True,
-            "prompt": prompt,
-            "memory": ConversationBufferWindowMemory(
-                memory_key="history",
-                input_key="question",
-                k=5),
-        }
-    )
-
-
-    # # Create the main panel
-    # st.title("anyDoc :bookmark_tabs:")
-    # st.subheader("Upload and chat with your documents!")
-
-# Get the user's natural question input
-question = st.text_input(":blue[Ask a question:]", placeholder="Enter your question.")
-
-# Create a submit button for executing the query
-query_button = st.button("Submit")
-
-# Execute the query when the submit button is clicked
-if query_button:
-
-    # if not submit_button:
-    #     st.warning(":wave: Please connect to the database first.")
-    #     st.stop()
-
-    try:
-        with st.spinner(text='Thinking... 🤔'):
-            print("\nQuestion: " + str(question))
-            # print(str(question))
-            result = qa_chain({"query": question})
-
-        st.subheader("Answer :robot_face:")
-        st.write(result['result'])
-
-
-        st.info(":coffee: _Did that answer your question? If not, try to be more specific._")
-    except Exception as e:
-        print(e)
-        st.warning(":wave: Please enter a valid question. Try to be as specific as possible.")
+user_question = st.text_input("Ask a question about your documents:")
+if user_question:
+    handle_userinput(user_question)
