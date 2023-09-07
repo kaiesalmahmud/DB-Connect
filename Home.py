@@ -18,6 +18,6 @@ Say goodbye to complex SQL queries and embrace the simplicity of natural languag
 )
 st.markdown(
     """
-    #### 👈 Select a Database from the sidebar 
+    #### 👈 Select a Database or Tool from the sidebar 
     """
 )

@@ -111,6 +111,10 @@ def explain(query, schema, query_output):
 
 # Create the sidebar for DB connection parameters
 
+# Create the main panel
+st.title("anyDB :sparkles:")
+st.subheader("Connect your database and ask questions!")
+
 host="localhost"
 port="5432"
 database="ReportDB"
@@ -119,7 +123,7 @@ password="postgres"
 
 with st.form("Connect Your Database"):
 
-    st.markdown("#### Connect Your Database")
+    # st.markdown("#### Connect Your Database")
     host = st.text_input("Host", placeholder=host)
     port = st.text_input("Port", placeholder=port)
     username = st.text_input("Username", placeholder=username)
@@ -182,10 +186,6 @@ if submit_button:
     )
 
     st.sidebar.success("Connected to the database!")
-
-# Create the main panel
-st.title("anyDB :sparkles:")
-st.subheader("Connect your database and ask questions!")
 
 # Get the user's natural question input
 question = st.text_input(":blue[Ask a question:]", placeholder="Enter your question.")
