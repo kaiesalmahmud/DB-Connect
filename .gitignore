@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+.streamlit/
 *.py[cod]
 *$py.class
 *.pdf
