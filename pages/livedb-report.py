@@ -17,15 +17,17 @@ def generate_report(date = "'2023-10-15'"):
     # Create a cursor object to interact with the database
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SET TIMEZONE TO 'Asia/Dhaka';
-    """);
+    # cursor.execute("""
+    #     SET TIMEZONE TO 'Asia/Dhaka';
+    # """);
 
     # start_date = "'2023-10-15'"
     start_date = date
     end_date = start_date
 
     base_query = f"""
+
+    SET TIMEZONE TO 'Asia/Dhaka';
 
     WITH "on_beats" as (
         SELECT
