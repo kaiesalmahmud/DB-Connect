@@ -10,6 +10,7 @@ __pycache__/
 # Key files
 key.txt
 pass.txt
+adiq_db_pass.txt
 
 # C extensions
 *.so

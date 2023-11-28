@@ -2,15 +2,30 @@ import psycopg2
 import pandas as pd
 import streamlit as st
 
-conn = psycopg2.connect(
-    host="server-alpha.ad-iq.com",
-    port="32974",
-    dbname="adiq",
-    user="mlteam",
-    # user="postgres",
-    password="q7a2C6MKV570B1MNZSQpyO3EifwdtkmV"
-    # password="tJpvTb51h4CWVtbU3wiF2O2LV5bKYu8s"
-)
+adiq_db_pass = open('adiq_db_pass.txt', 'r').read().strip()
+
+adiq_db_creds = {
+    "host" : "server-alpha.ad-iq.com",
+    "port" : "32974",
+    "db" : "adiq",
+    "username" : "mlteam",
+    "password" : adiq_db_pass
+}
+
+def get_db_connection():
+
+    creds = adiq_db_creds
+
+    conn = psycopg2.connect(
+        host=creds['host'],
+        port=creds['port'],
+        dbname=creds['db'],
+        user=creds['username'],
+        password=creds['password']
+    )
+    return conn
+
+conn = get_db_connection()
 
 def generate_report(date = "'2023-10-15'"):
 
